@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orbital-decision-mesh"
+version = "0.1.0"
+description = "Real-time LEO constellation beam-hopping simulation platform utilizing MAPPO and FastMCP."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Principal MLE / Systems Architect" }
+]
+dependencies = [
+    "torch>=2.0.0",
+    "gymnasium>=0.29.0",
+    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "skyfield>=1.46",
+    "python-dotenv>=1.0.0",
+    "fastmcp>=0.1.0",
+    "evidently>=0.4.0",
+    "langsmith>=0.1.0",
+    "prometheus-client>=0.17.0",
+    "pydantic>=2.0.0"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
