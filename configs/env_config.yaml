@@ -1,0 +1,19 @@
+simulation:
+  num_satellites: 4
+  num_cells: 8
+  episode_length: 50
+  min_elevation_deg: 10.0
+
+ground_stations:
+  - name: "London Teleport"
+    lat: 51.5074
+    lon: -0.1278
+    elevation_m: 10.0
+  - name: "New York Gateway"
+    lat: 40.7128
+    lon: -74.0060
+    elevation_m: 15.0
+  - name: "Tokyo Station"
+    lat: 35.6762
+    lon: 139.6503
+    elevation_m: 5.0
