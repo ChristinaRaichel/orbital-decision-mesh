@@ -99,6 +99,7 @@ class SatelliteDataLoader:
         fallback_omm = [
             {
                 "OBJECT_NAME": "STARLINK-SIM-1",
+                "OBJECT_ID": "2026-001A",
                 "EPOCH": "2026-09-22T00:00:00.000000",
                 "MEAN_MOTION": "15.06",
                 "ECCENTRICITY": "0.0001",
@@ -108,6 +109,12 @@ class SatelliteDataLoader:
                 "MEAN_ANOMALY": "280.0",
                 "NORAD_CAT_ID": "99901",
                 "BSTAR": "0.0001",
+                "CLASSIFICATION_TYPE": "U",
+                "EPHEMERIS_TYPE": "0",
+                "ELEMENT_SET_NO": "999",
+                "REV_AT_EPOCH": "0",
+                "MEAN_MOTION_DOT": "0.0",
+                "MEAN_MOTION_DDOT": "0.0",
             }
         ]
         return [EarthSatellite.from_omm(self.ts, item) for item in fallback_omm]

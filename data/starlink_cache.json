@@ -1,0 +1,37 @@
+[
+  {
+    "sat_name": "STARLINK-SIM-1",
+    "stations": {
+      "London Teleport": {
+        "sat_name": "STARLINK-SIM-1",
+        "sat_lat": -13.6985,
+        "sat_lon": -58.7478,
+        "sat_alt_km": 551.08,
+        "azimuth_deg": 236.96,
+        "elevation_deg": -38.53,
+        "distance_km": 8765.08,
+        "is_visible": false
+      },
+      "New York Gateway": {
+        "sat_name": "STARLINK-SIM-1",
+        "sat_lat": -13.6987,
+        "sat_lon": -58.7476,
+        "sat_alt_km": 551.08,
+        "azimuth_deg": 162.0,
+        "elevation_deg": -23.64,
+        "distance_km": 6258.07,
+        "is_visible": false
+      },
+      "Tokyo Station": {
+        "sat_name": "STARLINK-SIM-1",
+        "sat_lat": -13.6989,
+        "sat_lon": -58.7475,
+        "sat_alt_km": 551.08,
+        "azimuth_deg": 41.27,
+        "elevation_deg": -75.56,
+        "distance_km": 12920.31,
+        "is_visible": false
+      }
+    }
+  }
+]

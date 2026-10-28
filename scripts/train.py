@@ -28,22 +28,83 @@ PPO_EPOCHS = 4
 CHECKPOINT_DIR = Path("checkpoints")
 
 
-def compute_gae(rewards, values, next_value, dones, gamma=0.99, lam=0.95):
-    """Computes Generalized Advantage Estimation (GAE)."""
+def compute_gae(
+    rewards,
+    values,
+    next_value,
+    dones,
+    gamma=0.99,
+    lam=0.95,
+):
+    """
+    rewards:    [T, N]
+    values:     [T, N], [T, 1], or [T]
+    next_value: scalar, [1], or [N]
+    dones:      [T, N], [T, 1], or [T]
+    """
+    rewards = torch.as_tensor(rewards, dtype=torch.float32)
+    device = rewards.device
+    T, N = rewards.shape
+
+    values = torch.as_tensor(
+        values, dtype=torch.float32, device=device
+    )
+
+    # Normalize values to [T, N].
+    if values.dim() == 1:
+        values = values.unsqueeze(-1)
+
+    values = values.expand(T, N)
+
+    next_value = torch.as_tensor(
+        next_value, dtype=torch.float32, device=device
+    ).reshape(-1)
+
+    if next_value.numel() == 1:
+        next_value = next_value.expand(N)
+    elif next_value.numel() != N:
+        raise ValueError(
+            f"next_value must contain 1 or {N} elements, "
+            f"got {next_value.numel()}"
+        )
+
+    dones = torch.as_tensor(
+        dones, dtype=torch.float32, device=device
+    )
+
+    if dones.dim() == 1:
+        dones = dones.unsqueeze(-1)
+
+    dones = dones.expand(T, N)
+
     advantages = torch.zeros_like(rewards)
-    last_gae = 0
-    for t in reversed(range(len(rewards))):
-        if t == len(rewards) - 1:
+    last_gae = torch.zeros(N, dtype=torch.float32, device=device)
+
+    for t in reversed(range(T)):
+        if t == T - 1:
             next_val = next_value
         else:
             next_val = values[t + 1]
-            
-        delta = rewards[t] + gamma * next_val * (1 - dones[t]) - values[t]
-        last_gae = delta + gamma * lam * (1 - dones[t]) * last_gae
+
+        non_terminal = 1.0 - dones[t]
+
+        delta = (
+            rewards[t]
+            + gamma * next_val * non_terminal
+            - values[t]
+        )
+
+        last_gae = (
+            delta
+            + gamma * lam * non_terminal * last_gae
+        )
+
         advantages[t] = last_gae
-        
+
     returns = advantages + values
+
     return advantages, returns
+
 
 
 def main():
@@ -55,8 +116,9 @@ def main():
     env = SatComBeamEnv(num_satellites=num_sats, num_cells=num_cells)
     
     # Dimensions: obs_dim per agent, act_dim per agent, global_state_dim for centralized critic
-    obs_dim = env.observation_space[0].shape[0]
-    act_dim = env.action_space[0].n
+    # Safe extraction that handles both Box and Tuple/List spaces without crashing
+    obs_dim = env.observation_space[0].shape[0] if hasattr(env.observation_space, '__getitem__') else env.observation_space.shape[-1]
+    act_dim = env.action_space[0].n if hasattr(env.action_space, '__getitem__') else env.action_space.n
     global_state_dim = obs_dim * num_sats
 
     # 2. MAPPO Policy Setup
@@ -109,28 +171,82 @@ def main():
             if done:
                 break
 
+        
         # Compute next value for GAE boundary
         with torch.no_grad():
-            next_global_tensor = torch.tensor(global_state, dtype=torch.float32, device=device)
+            next_global_tensor = torch.as_tensor(
+                global_state,
+                dtype=torch.float32,
+                device=device,
+            )
             next_value = policy.get_value(next_global_tensor)
 
-        # Convert buffers to tensors
-        b_obs = torch.stack(ep_obs)
-        b_actions = torch.stack(ep_actions)
-        b_log_probs = torch.stack(ep_log_probs)
-        b_rewards = torch.stack(ep_rewards)
-        b_values = torch.stack(ep_values)
-        b_dones = torch.stack(ep_dones)
-        b_global_states = torch.stack(ep_global_states)
+        # Stack collected rollout data.
+        # Observations:    [T, N, obs_dim]
+        # Actions:         [T, N]
+        # Log probabilities: [T, N]
+        # Rewards:         [T, N]
+        # Values:          [T, ...]
+        # Dones:           [T, ...]
 
-        # Calculate Advantages & Returns
+        ep_obs_tensor = torch.stack(ep_obs)
+        ep_actions_tensor = torch.stack(ep_actions)
+        ep_log_probs_tensor = torch.stack(ep_log_probs)
+        ep_rewards_tensor = torch.stack(ep_rewards)
+        ep_values_tensor = torch.stack(ep_values)
+        ep_dones_tensor = torch.stack(ep_dones)
+        ep_global_states_tensor = torch.stack(ep_global_states)
+
+        T = ep_rewards_tensor.shape[0]
+        N = num_sats
+
+        # Normalize rewards to [T, N].
+        ep_rewards_tensor = ep_rewards_tensor.reshape(T, N)
+
+        # Calculate GAE BEFORE flattening the rollout.
         advantages, returns = compute_gae(
-            b_rewards, b_values, next_value, b_dones, gamma=GAMMA, lam=GAE_LAMBDA
+            rewards=ep_rewards_tensor,
+            values=ep_values_tensor,
+            next_value=next_value,
+            dones=ep_dones_tensor,
+            gamma=GAMMA,
+            lam=GAE_LAMBDA,
         )
 
-        # Update MAPPO Policy
+        # Flatten time and agent dimensions: T * N samples.
+        b_obs = ep_obs_tensor.reshape(T * N, obs_dim)
+        b_actions = ep_actions_tensor.reshape(T * N)
+        b_old_log_probs = ep_log_probs_tensor.reshape(T * N)
+
+        b_returns = returns.reshape(T * N)
+        b_advantages = advantages.reshape(T * N)
+
+        # Repeat each centralized global state for every agent.
+        # [T, global_state_dim] -> [T, N, global_state_dim]
+        b_global_states = (
+            ep_global_states_tensor
+            .unsqueeze(1)
+            .expand(T, N, global_state_dim)
+            .reshape(T * N, global_state_dim)
+        )
+
+        # Ensure all PPO inputs have matching batch sizes.
+        assert b_obs.shape[0] == T * N
+        assert b_actions.shape[0] == T * N
+        assert b_old_log_probs.shape[0] == T * N
+        assert b_global_states.shape[0] == T * N
+        assert b_returns.shape[0] == T * N
+        assert b_advantages.shape[0] == T * N
+
+        # Update MAPPO policy.
         actor_loss, critic_loss = policy.update(
-            b_obs, b_global_states, b_actions, b_log_probs, returns, advantages, epochs=PPO_EPOCHS
+            b_obs,
+            b_global_states,
+            b_actions,
+            b_old_log_probs,
+            b_returns,
+            b_advantages,
+            epochs=PPO_EPOCHS,
         )
 
         # Logging
