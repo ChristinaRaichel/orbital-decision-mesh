@@ -106,8 +106,9 @@ cp .env.example .env
 pytest tests/ -v
 ```
 
-### 4. Execute WorkflowsBash
-```
+### 4. Execute Workflows
+
+```Bash
 Fetch live TLE/OMM telemetry and cache locally
 python scripts/fetch_tle.py
 
