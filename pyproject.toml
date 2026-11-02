@@ -12,19 +12,17 @@ license = { text = "Apache-2.0" }
 authors = [
     { name = "Principal MLE / Systems Architect" }
 ]
+
 dependencies = [
     "torch>=2.0.0",
     "gymnasium>=0.29.0",
-    "numpy>=1.24.0",
-    "requests>=2.31.0",
-    "skyfield>=1.46",
-    "python-dotenv>=1.0.0",
-    "fastmcp>=0.1.0",
+    "skyfield>=1.45",
+    "sgp4>=2.23",
+    "numpy==1.26.4",  # Pins NumPy 1.x to avoid C binary incompatibilities
+    "pandas>=2.0.0",
     "evidently>=0.4.0",
-    "langsmith>=0.1.0",
-    "prometheus-client>=0.17.0",
-    "pydantic>=2.0.0"
-]
+    "prometheus-client>=0.16.0",
+    "fastmcp>=0.1.0"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
