@@ -1,126 +1,122 @@
-# orbital-decision-mesh
+# Orbital Decision Mesh
 
-# Orbital Decision Mesh (`orbital-decision-mesh`)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Framework: PyTorch](https://img.shields.io/badge/PyTorch-2.x-orange.svg)](https://pytorch.org/)
+[![Protocol: FastMCP](https://img.shields.io/badge/FastMCP-Server-purple.svg)](https://github.com/modelcontextprotocol/python-sdk)
 
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%252b-blue.svg)](https://www.python.org/downloads/)
-[![Framework: PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-Server-green.svg)](https://github.com/PrefectHQ/fastmcp)
+An enterprise-grade, multi-agent reinforcement learning (MARL) and agentic control platform engineered for **Low Earth Orbit (LEO) satellite beam-hopping optimization**. 
 
-`orbital-decision-mesh` is a production-grade, high-performance simulation and decision-making platform designed for **Low Earth Orbit (LEO) satellite constellation beam-hopping allocation**. It merges **Multi-Agent Reinforcement Learning (MAPPO)** for real-time policy control with an **agentic LLM "Slow Loop"** via the Model Context Protocol (FastMCP) and comprehensive enterprise observability.
-
----
-
-## 🏗️ System Architecture
-
-The platform separates real-time execution from agentic reasoning and telemetry tracking:
-
-1. **The Fast Loop (Real-Time Control):**
-   - **Environment (`SatComBeamEnv`):** Multi-agent Gymnasium environment simulating satellite orbital dynamics via Skyfield OMM parsers and dynamic cell demand matrices.
-   - **MAPPO Policy (`MAPPOPolicy`):** Decentralized Actor / Centralized Critic architecture (`obs_dim: 12`, `act_dim: 8`, `global_state_dim: 48`) optimizing beam-to-cell allocations with Generalized Advantage Estimation (GAE).
-
-2. **The Slow Loop (Agentic Ground Copilot):**
-   - **FastMCP Server (`src/mcp/server.py`):** Exposes live satellite telemetry, orbital visibility calculations, and resource allocations to LLM ground assistants using the Model Context Protocol.
-   - **RAG & Reasoning:** Ground station advisory copilot for operational intervention and telemetry analysis.
-
-3. **Agentic Observability & MLOps:**
-   - **Evidently AI:** Real-time data and concept drift detection on streaming orbital features.
-   - **LangSmith:** Token tracing and prompt audit tracking for the slow-loop copilot.
-   - **Prometheus:** System metric emitters for telemetry monitoring and anomaly detection triggering automated Continuous Training (CT) pipelines.
+This system bridges high-frequency orbital physics simulation with low-frequency agentic reasoning, utilizing a **Fast Loop** for real-time multi-agent resource allocation and a **Slow Loop** for RAG-backed LLM copilot oversight, model context protocol (MCP) server tooling, and continuous MLOps observability.
 
 ---
 
-## 📂 Repository Structure
+## System Architecture
+
+The platform separates real-time multi-agent control from higher-level cognitive oversight and monitoring:
 
 ```text
+       [ Space-Track OMM API / TLE Ingestion ]
+                       │
+                       ▼
+         ┌───────────────────────────┐
+         │  Fast Loop (Real-Time)    │
+         │  - SatComBeamEnv (Gym)    │
+         │  - MAPPO Actor-Critic     │
+         │  - Beam Hop Allocation    │
+         └─────────────┬─────────────┘
+                       │
+         ┌─────────────┴─────────────┐
+         ▼                           ▼
+[ Evidently / Prometheus ]   [ FastMCP Gateway ]
+ (Drift & System Metrics)            │
+                                     ▼
+                             ┌───────────────────┐
+                             │ Slow Loop (Agent) │
+                             │ - RAG Telemetry   │
+                             │ - Ground Copilot  │
+                             │ - Airflow CT Trig │
+                             └───────────────────┘
+
+```
+
+## Key Technical Highlights
+### 1. Robust Data Pipeline & Orbital Mechanics
+* Native OMM Parsing: 
+Bypasses legacy TLE string column-offset corruptions and Alpha-5 catalog ID overflows by ingesting structured Orbital Mean Elements Messages (EarthSatellite.from_omm) via Skyfield.
+* Deterministic Fallback: 
+Includes automated fallback snapshots (starlink_cache.json) for air-gapped test environments and CI/CD pipelines.
+### 2. Fast Loop: Multi-Agent Reinforcement Learning (MAPPO)
+* Decentralized Execution, Centralized Training (CTDE): 
+Implements a Multi-Agent PPO architecture where individual satellite agents observe local states ($obs\_dim = 12$) and select discrete beam targets ($act\_dim = 8$), while a centralized critic evaluates global constellation state ($global\_state\_dim = 48$).
+* Optimized Advantage Estimation: 
+Features vectorized Generalized Advantage Estimation (GAE), clipped policy surrogate objectives, and stable tensor gradient flows.
+### 3. Slow Loop: Agentic Observability & FastMCP Gateway
+* FastMCP Server Integration: 
+Exposes live constellation telemetry, RAG historical logs, and MAPPO policy triggers as native Model Context Protocol tools.
+* Ground Telemetry Copilot: 
+An LLM-backed operational assistant that interprets metric threshold breaches, analyzes orbital geometry blockages, and suggests gateway handover or beam redistribution strategies.
+### 4. Enterprise MLOps & Continuous Training (CT)
+* Data & Concept Drift: 
+Integrated Evidently AI monitoring pipelines to detect telemetry shifts and trigger automated Airflow Continuous Training (CT) pipelines.
+* Tracing & Telemetry: 
+LangSmith token tracking and Prometheus metric emitters for real-time production visibility.
+
+## 📁 Repository Directory 
+
+```StructurePlaintextc
 orbital-decision-mesh/
-├── .github/
-│   └── workflows/          # CI/CD pipelines (linting, test execution)
-├── airflow/
-│   └── dags/               # Airflow DAGs for automated CT triggers
-├── configs/
-│   ├── env_config.yaml     # Simulation parameters and ground stations
-│   └── mappo_config.yaml   # MAPPO hyperparameters (lr, clip, GAE lambda)
-├── data/
-│   └── starlink_cache.json # Cached OMM telemetry for offline execution
-├── scripts/
-│   ├── fetch_tle.py        # Space-Track ingestion and fallback utility
-│   ├── train.py            # MAPPO end-to-end training execution loop
-│   └── run_mcp.py          # FastMCP server runner for the slow loop
+├── .github/workflows/      # CI/CD test execution pipelines
+├── airflow/dags/           # Airflow DAGs for automated CT triggers
+├── configs/                # YAML configurations (env & MAPPO hyperparameters)
+├── data/                   # Cached OMM telemetry snapshots
+├── scripts/                # Execution entrypoints (fetch_tle.py, train.py, run_mcp.py)
 ├── src/
-│   ├── data/loader.py      # Space-Track API client & SGP4 OMM parser
-│   ├── envs/sat_env.py     # Multi-agent Gymnasium environment
-│   ├── models/mappo_policy.py # Actor-Critic networks & PPO vectorized updates
-│   ├── observability/      # Prometheus metrics & Evidently drift hooks
-│   └── mcp/server.py       # FastMCP server endpoints
-├── tests/                  # Unit and integration test suite
-├── .env.example            # Environment variable template
-├── pyproject.toml          # Project build metadata & dependencies
+│   ├── agents/             # Slow loop Ground Copilot & prompt templates
+│   ├── data/               # Space-Track API loader & OMM parser
+│   ├── envs/               # Gymnasium multi-agent satellite environment
+│   ├── mcp/                # FastMCP server integration
+│   ├── models/             # MAPPO Actor-Critic policy architecture
+│   └── observability/      # Evidently drift & Prometheus metrics hooks
+├── tests/                  # Comprehensive unit & integration test suite
+├── .env.example            # Environment credential templates
+├── pyproject.toml          # Modern Hatchling build backend & dependencies
 └── LICENSE                 # Apache 2.0 License
 ```
 
----
-##  Getting Started Locally
-1. Clone & Set Up Virtual Environment
 
+## Installation & Quickstart
+### 1. Clone & Setup Environment
 ```Bash
-# Clone the repository
-git clone [https://github.com/yourusername/orbital-decision-mesh.git]
-
-# Navigate to clone's root
+git clone [https://github.com/yourusername/orbital-decision-mesh.git](https://github.com/yourusername/orbital-decision-mesh.git)
 cd orbital-decision-mesh
 
-# Create a virtual environment
-python -m venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate 
-
-# Upgrade pip and setup tools
-python -m pip install --upgrade pip
-```
-
-2. Install Dependencies
-
-
-
-```Bash
-# Install the package in editable mode with all core requirements via Hatchling:
-pip install -e .
-```
-
-3. Configure Environment Variables
-
-```Bash
-# Copy the configuration template and populate your Space-Track credentials(optional)
+# Copy environment variables template
 cp .env.example .env
 ```
 
-4. Run Sanity Checks & Training
-
-```Bash
-#Test Telemetry Ingestion:
-python scripts/fetch_tle.py
-
-#Execute MAPPO Training Loop:
-python scripts/train.py
+### 2. Install Dependencies
+   Using modern Python packaging (pyproject.toml with Hatchling):
+   ```Bash
+   pip install -e .
+   ```
+### 3. Run Verification & Test Suite
+``` Bash
+# Run unit and integration tests across fast and slow loops
+pytest tests/ -v
 ```
 
+### 4. Execute WorkflowsBash
+```
+Fetch live TLE/OMM telemetry and cache locally
+python scripts/fetch_tle.py
 
+# Run MAPPO training loop (Fast Loop)
+python scripts/train.py
 
-# 🛠️ Tech Stack & Libraries
+# Launch FastMCP server gateway (Slow Loop)
+python scripts/run_mcp.py
 
-Core Language: Python 3.10+
-
-Build System: Hatchling (pyproject.toml)
-
-Reinforcement Learning: PyTorch, Gymnasium
-
-Orbital Mechanics: Skyfield, SGP4
-
-Agentic Interface: FastMCP
-
-Observability: Prometheus, Evidently, LangSmith
-
-# 📄 License
+```
+## License
 This project is licensed under the terms of the Apache 2.0 License. See the LICENSE file for details.
