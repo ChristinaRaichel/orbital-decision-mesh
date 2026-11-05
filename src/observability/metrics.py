@@ -1,39 +1,31 @@
 """
-Prometheus metric emitters for real-time training loop and system observability.
+src/observability/metrics.py
+Prometheus metrics emitters for real-time constellation telemetry, policy optimization, and MCP latency monitoring.
 """
-from prometheus_client import Counter, Gauge, start_http_server
 
-class TrainingMetrics:
-    """Manager for emitting real-time telemetry and training metrics via Prometheus."""
-    
-    def __init__(self, port: int = 8000, start_server: bool = False):
-        if start_server:
-            try:
-                start_http_server(port)
-            except Exception:
-                # Avoid binding errors if metrics server is already running
-                pass
-        
-        # Prometheus Gauges and Counters
-        self.episode_reward = Gauge("sat_episode_reward", "Total reward per training episode", ["agent_id"])
-        self.actor_loss = Gauge("sat_actor_loss", "PPO Actor loss magnitude")
-        self.critic_loss = Gauge("sat_critic_loss", "PPO Critic loss magnitude")
-        self.drift_score = Gauge("sat_telemetry_drift_score", "Evidently AI dataset drift share")
-        self.training_steps = Counter("sat_training_steps_total", "Total environment steps executed")
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
-    def log_reward(self, agent_id: int, reward: float):
-        """Record episode reward for a specific satellite agent."""
-        self.episode_reward.labels(agent_id=str(agent_id)).set(reward)
+# Tier 1: Control Plane Metrics (MAPPO Policy)
+MAPPO_EPISODE_REWARD = Gauge("mappo_episode_reward_total", "Total cumulative episodic reward for MAPPO policy")
+MAPPO_ACTOR_LOSS = Gauge("mappo_actor_loss", "Policy surrogate loss for MAPPO actor")
+MAPPO_CRITIC_LOSS = Gauge("mappo_critic_loss", "Value function mean squared error for MAPPO critic")
+MAPPO_ACTION_ENTROPY = Gauge("mappo_action_entropy", "Action distribution entropy for exploration monitoring")
 
-    def log_losses(self, actor_loss: float, critic_loss: float):
-        """Record optimization losses from the MAPPO update step."""
-        self.actor_loss.set(actor_loss)
-        self.critic_loss.set(critic_loss)
+# Tier 2: Data Quality & Drift Metrics (Evidently AI)
+EVIDENTLY_DATA_DRIFT_SCORE = Gauge("evidently_data_drift_score", "Share of drifted satellite OMM features [0.0 - 1.0]")
+EVIDENTLY_DRIFT_ALERT_COUNT = Counter("evidently_drift_alerts_total", "Total number of statistical drift alerts triggered")
+SATELLITE_ALTITUDE_MEAN_KM = Gauge("constellation_satellite_mean_altitude_km", "Mean constellation orbital altitude in km")
 
-    def log_drift(self, score: float):
-        """Record the current data drift score share from Evidently AI."""
-        self.drift_score.set(score)
+# Tier 3: Agentic Gateway Metrics (FastMCP & Slow Loop)
+MCP_TOOL_LATENCY_SECONDS = Histogram(
+    "mcp_tool_execution_latency_seconds",
+    "FastMCP tool execution duration in seconds",
+    buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0)
+)
+RAG_RETRIEVAL_HIT_COUNT = Counter("rag_retrieval_hits_total", "Total successfully retrieved RAG telemetry context documents")
+LLM_TOKEN_USAGE_COUNTER = Counter("copilot_llm_tokens_total", "Total LLM tokens consumed by Ground Telemetry Copilot", ["token_type"])
 
-    def step(self):
-        """Increment global step counter."""
-        self.training_steps.inc()
+def start_metrics_exporter(port: int = 8000):
+    """Starts the Prometheus metrics HTTP endpoint."""
+    start_http_server(port)
+    print(f"[Prometheus Exporter] Exposing metrics at http://localhost:{port}/metrics")

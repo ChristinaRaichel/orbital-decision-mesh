@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "constellation_fast_loop"
+    static_configs:
+      - targets: ["localhost:8000"]
+
+  - job_name: "constellation_slow_loop"
+    static_configs:
+      - targets: ["localhost:8001"]
