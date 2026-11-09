@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  # Your Custom Python Application (Fast/Slow Loop + Metrics Exporter)
+  app:
+    build: .
+    container_name: constellation_app
+    ports:
+      - "8000:8000"   # Prometheus metrics
+      - "8080:8080"   # FastMCP server
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
+
+  # Prometheus Infrastructure
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: constellation_prometheus
@@ -8,7 +20,10 @@ services:
       - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    depends_on:
+      - app
 
+  # Grafana Dashboard Infrastructure
   grafana:
     image: grafana/grafana:10.0.0
     container_name: constellation_grafana
@@ -18,3 +33,5 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - ./configs/grafana_dashboard.json:/var/lib/grafana/dashboards/dashboard.json
+    depends_on:
+      - prometheus

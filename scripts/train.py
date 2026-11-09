@@ -8,6 +8,8 @@ import torch
 import logging
 import numpy as np
 from pathlib import Path
+import time
+from src.observability.metrics import start_metrics_exporter
 
 # Ensure 'src' is in Python path when executing from project root
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -109,7 +111,7 @@ def compute_gae(
 
 def main():
     logger.info("Initializing MAPPO Satellite Beam-Hopping Training Run...")
-
+    start_metrics_exporter(port=8000)
     # 1. Environment Setup
     num_sats = 4
     num_cells = 8

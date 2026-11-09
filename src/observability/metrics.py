@@ -25,7 +25,7 @@ MCP_TOOL_LATENCY_SECONDS = Histogram(
 RAG_RETRIEVAL_HIT_COUNT = Counter("rag_retrieval_hits_total", "Total successfully retrieved RAG telemetry context documents")
 LLM_TOKEN_USAGE_COUNTER = Counter("copilot_llm_tokens_total", "Total LLM tokens consumed by Ground Telemetry Copilot", ["token_type"])
 
-def start_metrics_exporter(port: int = 8000):
+def start_metrics_exporter(port: int = 8000, addr: str = "0.0.0.0"):
     """Starts the Prometheus metrics HTTP endpoint."""
     start_http_server(port)
     print(f"[Prometheus Exporter] Exposing metrics at http://localhost:{port}/metrics")
