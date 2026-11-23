@@ -21,7 +21,9 @@ dependencies = [
     "prometheus-client>=0.16.0",
     "skyfield>=1.45",
     "pandas>=2.0.0",
-    "numpy>=1.24.0"
+    "numpy>=1.24.0",
+    "matplotlib",
+    "seaborn"
 ]
 
 [tool.hatch.build.targets.wheel]
