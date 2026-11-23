@@ -3,7 +3,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "uid": "constellation-rl-obs",
   "title": "Constellation RL Engine — Observability & Operations Control",
   "panels": [
     {
