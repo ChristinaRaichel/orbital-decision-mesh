@@ -4,11 +4,14 @@ services:
     build: .
     container_name: constellation_app
     ports:
-      - "8000:8000"   # Prometheus metrics
-      - "8080:8080"   # FastMCP server
+      - "8000:8000"   # Fast loop / MAPPO & telemetry metrics
+      - "8001:8001"   # Slow loop / MCP metrics
+      - "8080:8080"   # FastMCP HTTP server
     environment:
       - PYTHONUNBUFFERED=1
     restart: always
+    networks:
+      - constellation-net
 
   # Prometheus Infrastructure
   prometheus:
@@ -20,6 +23,9 @@ services:
       - "9090:9090"
     depends_on:
       - app
+    networks:
+      - constellation-net
+    
 
   # Grafana Dashboard Infrastructure
   grafana:

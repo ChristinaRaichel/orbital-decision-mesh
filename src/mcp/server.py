@@ -2,12 +2,13 @@ import logging
 from fastmcp import FastMCP
 from src.data.loader import SatelliteDataLoader
 from prometheus_client import start_http_server, Counter
+from src.observability.metrics import MCP_TOOL_LATENCY_SECONDS,start_metrics_exporter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp_server")
 
-# 1. Start a background HTTP server for Prometheus on port 8000
-start_http_server(8000)
+
+start_metrics_exporter(8001)
 
 # Optional: Define a custom metric to track tool calls
 TOOL_CALLS = Counter('mcp_tool_calls_total', 'Total tool calls executed', ['tool_name'])
@@ -17,6 +18,7 @@ loader = SatelliteDataLoader(limit_sats=5)
 
 
 @mcp.tool()
+@MCP_TOOL_LATENCY_SECONDS.time()
 def get_live_constellation_status() -> str:
     """Fetch active Starlink satellite telemetry and check London visibility."""
     TOOL_CALLS.labels(tool_name='get_live_constellation_status').inc()
@@ -35,6 +37,7 @@ def get_live_constellation_status() -> str:
 
 
 @mcp.tool()
+@MCP_TOOL_LATENCY_SECONDS.time()
 def query_telemetry_rag(query_text: str) -> str:
     """Perform semantic RAG search over historical telemetry records and incident logs."""
     TOOL_CALLS.labels(tool_name='query_telemetry_rag').inc()
@@ -43,6 +46,7 @@ def query_telemetry_rag(query_text: str) -> str:
 
 
 @mcp.tool()
+@MCP_TOOL_LATENCY_SECONDS.time()
 def trigger_mappo_policy_evaluation() -> str:
     """Trigger a dry-run inference step of the MAPPO beam-hopping allocation engine."""
     TOOL_CALLS.labels(tool_name='trigger_mappo_policy_evaluation').inc()

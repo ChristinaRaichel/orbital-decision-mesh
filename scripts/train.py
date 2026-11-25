@@ -9,7 +9,12 @@ import logging
 import numpy as np
 from pathlib import Path
 import time
-from src.observability.metrics import start_metrics_exporter
+from src.observability.metrics import (
+    MAPPO_EPISODE_REWARD,
+    MAPPO_ACTOR_LOSS,
+    MAPPO_CRITIC_LOSS,
+    start_metrics_exporter,
+)
 
 # Ensure 'src' is in Python path when executing from project root
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -251,6 +256,10 @@ def main():
             epochs=PPO_EPOCHS,
         )
 
+        MAPPO_EPISODE_REWARD.set(float(total_reward))
+        MAPPO_ACTOR_LOSS.set(float(actor_loss))
+        MAPPO_CRITIC_LOSS.set(float(critic_loss))
+
         # Logging
         if episode % 10 == 0 or episode == 1:
             logger.info(
@@ -267,6 +276,10 @@ def main():
             logger.info(f"Saved model checkpoint to '{ckpt_path}'")
 
     logger.info("MAPPO training run completed successfully.")
+    logger.info("MAPPO training run completed successfully.")
+    logger.info("Keeping Prometheus metrics server alive on port 8000 (Ctrl+C to stop)...")
+    while True:
+        time.sleep(5)
 
 
 if __name__ == "__main__":

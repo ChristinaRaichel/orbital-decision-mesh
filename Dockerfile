@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 
 # Prometheus metrics and FastMCP HTTP
-EXPOSE 8000 8080
+EXPOSE 8001 8000 8080
 
 # Start MCP server
 CMD ["python", "-u", "-m", "src.mcp.server"]
